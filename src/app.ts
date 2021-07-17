@@ -23,6 +23,21 @@ app.use(express.json());
 // here we are adding middleware to allow cross-origin requests
 app.use(cors());
 
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+ // Add this
+ if (req.method === 'OPTIONS') {
+
+      res.header('Access-Control-Allow-Methods', 'PUT, POST, PATCH, DELETE, OPTIONS');
+      res.header('Access-Control-Max-Age', '120');
+      return res.status(200).json({});
+  }
+
+  next();
+});
+
 // TODO: logging middleware;
 
 const runningMessage = `Server running at http://localhost:${port}`;
@@ -123,6 +138,6 @@ io.on('connection', (client) => {
   }
 });
 
-server.listen(3000, () => {
+server.listen(port, () => {
   console.log('listening on *:3000');
 });
