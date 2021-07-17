@@ -1,31 +1,16 @@
-import express from 'express';
-import * as http from 'http';
+import { createServer } from "http";
 import { Server, Socket } from "socket.io";
-import cors from 'cors';
 import { Game, GameMap } from './lib/game';
 
-const app: express.Application = express();
-const server: http.Server = http.createServer(app);
-const io = new Server(server, {
+const httpServer = createServer();
+const io = new Server(httpServer, {
   cors: {
-    origin: false,
+    origin: '*',
   }
 });
-const port = 3000;
-// const routes: Array<CommonRoutesConfig> = [];
+
 const games: GameMap = {};
 const clientGames = {}
-
-app.use(express.json());
-app.use(cors());
-app.options('*', cors());
-
-// TODO: logging middleware;
-
-const runningMessage = `Server running at http://localhost:${port}`;
-app.get('/', (req: express.Request, res: express.Response) => {
-  res.status(200).send(runningMessage)
-});
 
 io.on('connection', (client: Socket) => {
   console.log('a user connected');
@@ -35,8 +20,7 @@ io.on('connection', (client: Socket) => {
   client.on('creategame', handleNewGame);
   client.on('joingame', handleJoinGame);
   client.on('gameturn', handleGameTurn);
-  client.on('playerpause', handlePlayerPause);
-
+  client.on('playerpause', handlePlayerPause);  
   client.on('disconnect', handleDisconnect);
 
   function handleNewGame() {
@@ -120,6 +104,4 @@ io.on('connection', (client: Socket) => {
   }
 });
 
-server.listen(port, () => {
-  console.log('listening on *:3000');
-});
+httpServer.listen(process.env.PORT || 3000);
