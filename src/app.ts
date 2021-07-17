@@ -8,7 +8,7 @@ const app: express.Application = express();
 const server: http.Server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: `https://snake-app-1.herokuapp.com/`,
     methods: ["GET", "POST"]
   }
 });
@@ -22,21 +22,6 @@ app.use(express.json());
 
 // here we are adding middleware to allow cross-origin requests
 app.use(cors());
-
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-
- // Add this
- if (req.method === 'OPTIONS') {
-
-      res.header('Access-Control-Allow-Methods', 'PUT, POST, PATCH, DELETE, OPTIONS');
-      res.header('Access-Control-Max-Age', '120');
-      return res.status(200).json({});
-  }
-
-  next();
-});
 
 // TODO: logging middleware;
 
