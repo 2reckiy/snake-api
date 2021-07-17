@@ -1,6 +1,6 @@
 import express from 'express';
 import * as http from 'http';
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import cors from 'cors';
 import { Game, GameMap } from './lib/game';
 
@@ -8,8 +8,7 @@ const app: express.Application = express();
 const server: http.Server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: `https://snake-app-1.herokuapp.com/`,
-    methods: ["GET", "POST"]
+    origin: '*',
   }
 });
 const port = 3000;
@@ -17,11 +16,9 @@ const port = 3000;
 const games: GameMap = {};
 const clientGames = {}
 
-// here we are adding middleware to parse all incoming requests as JSON 
 app.use(express.json());
-
-// here we are adding middleware to allow cross-origin requests
 app.use(cors());
+app.options('*', cors());
 
 // TODO: logging middleware;
 
@@ -30,7 +27,7 @@ app.get('/', (req: express.Request, res: express.Response) => {
   res.status(200).send(runningMessage)
 });
 
-io.on('connection', (client) => {
+io.on('connection', (client: Socket) => {
   console.log('a user connected');
 
   client.emit('gamelist', Object.keys(games));
