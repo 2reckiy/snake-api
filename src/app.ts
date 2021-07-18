@@ -21,13 +21,16 @@ const clientGames = {}
 io.on('connection', (client: Socket) => {
   console.log('a user connected');
 
-  client.emit('gamelist', Object.keys(games));
-
+  client.on('gamelist', handleGameList);
   client.on('creategame', handleNewGame);
   client.on('joingame', handleJoinGame);
   client.on('gameturn', handleGameTurn);
   client.on('playerpause', handlePlayerPause);  
   client.on('disconnect', handleDisconnect);
+
+  function handleGameList() {
+    client.emit('gamelist', Object.keys(games));
+  }
 
   function handleNewGame() {
     const id = Math.floor(Math.random() * 0xfffffffffffff).toString(16);
@@ -52,7 +55,7 @@ io.on('connection', (client: Socket) => {
 
     game.join(playerId);
 
-    client.emit('gamejoined');
+    client.emit('gamejoin');
   }
 
   function handleGameTurn({ gameId, playerId, directionCode }) {
@@ -78,7 +81,7 @@ io.on('connection', (client: Socket) => {
 
     game.playerPause(playerId);
 
-    client.emit('playerpaused', playerId);
+    client.emit('playerpause', playerId);
   }
 
   function handleDisconnect() {
@@ -105,6 +108,9 @@ io.on('connection', (client: Socket) => {
         io.emit('gametick', state);
       } else {
         clearInterval(intervalId);
+        delete games[state.id];
+        //TODO: clear clients games
+        io.emit('gameend', state);
       }
     }, 1000 / game.tickRate);
   }

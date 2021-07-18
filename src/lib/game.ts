@@ -120,9 +120,22 @@ export class Game {
 
   checkGameEnd(): void {
     this.state.isEnd = Object.values(this.state.players).every(player => player.isDead);
+    this.setWinner();
   }
 
   getPlayerEnemies(playerId: string): Player[] {
     return Object.values(this.state.players).filter(player => player.id !== playerId);
+  }
+
+  setWinner(): void {
+    const players = Object.values(this.state.players);
+    if (players.length === 1) {
+      this.state.winnerName = players[0].id;
+      this.state.winnerScore= players[0].score;
+      return;
+    }
+    const winner = players.sort((p1, p2) => p2.score - p1.score)[0];
+    this.state.winnerName = winner.id;
+    this.state.winnerScore= winner.score;
   }
 }
