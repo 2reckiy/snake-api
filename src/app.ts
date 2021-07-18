@@ -1,8 +1,13 @@
+import express from 'express';
+import cors from  'cors';
 import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import { Game, GameMap } from './lib/game';
 
-const httpServer = createServer();
+const app = express();
+app.use(cors());
+
+const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: '*',
