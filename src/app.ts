@@ -1,14 +1,14 @@
 import express from 'express';
 import cors from  'cors';
-import { createServer } from "http";
+// import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import { Game, GameMap } from './lib/game';
 
 const app = express();
+const server = app.listen(process.env.PORT || 3000);
 app.use(cors());
 
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
+const io = new Server(server, {
   cors: {
     origin: '*',
   }
@@ -108,5 +108,3 @@ io.on('connection', (client: Socket) => {
     }, 1000 / game.tickRate);
   }
 });
-
-httpServer.listen(process.env.PORT || 3000);
