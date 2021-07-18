@@ -39,7 +39,7 @@ export class Game {
 
       if (head.x === food.x && head.y === food.y) {
         snake.grow();
-        player.setScore(snake.getLength())
+        player.setScore(snake.getLength());
         this.spawnFood();
         return;
       }
@@ -150,7 +150,9 @@ export class Game {
       this.state.winnerScore = players[0].score;
       return;
     }
+    
     const winner = players.sort((p1, p2) => p2.score - p1.score)[0];
+    console.log(players, winner);
     this.state.winnerName = winner.id;
     this.state.winnerScore= winner.score;
   }
