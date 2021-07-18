@@ -1,22 +1,15 @@
 import express from 'express';
 import cors from  'cors';
-// import { createServer } from "http";
+import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import { Game, GameMap } from './lib/game';
 
+const PORT = process.env.PORT || 3000;
 const app = express();
-const server = app.listen(process.env.PORT || 3000);
-
 app.use(cors());
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  res.header("Access-Control-Allow-Methods", "PUT, GET, POST, DELETE, OPTIONS");
-  next();
-});
 
-const io = new Server(server, {
+const httpServer = createServer();
+const io = new Server(httpServer, {
   cors: {
     origin: '*',
   }
@@ -115,4 +108,8 @@ io.on('connection', (client: Socket) => {
       }
     }, 1000 / game.tickRate);
   }
+});
+
+httpServer.listen(PORT, () => {
+  console.log(`Server listens to ${PORT}`);
 });
