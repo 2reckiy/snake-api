@@ -143,6 +143,7 @@ export class Game {
     if (!players.length) {
       this.state.winnerName = 'No Winner';
       this.state.winnerScore = 0;
+      return;
     }
 
     if (players.length === 1) {
@@ -152,7 +153,6 @@ export class Game {
     }
     
     const winner = players.sort((p1, p2) => p2.score - p1.score)[0];
-    console.log(players, winner);
     this.state.winnerName = winner.id;
     this.state.winnerScore= winner.score;
   }
