@@ -19,13 +19,14 @@ const games: GameMap = {};
 const clientGames = {}
 
 io.on('connection', (client: Socket) => {
-  console.log('a user connected');
+  console.log('a user connected', client.id);
 
   client.on('gamelist', handleGameList);
   client.on('creategame', handleNewGame);
   client.on('joingame', handleJoinGame);
   client.on('gameturn', handleGameTurn);
-  client.on('playerpause', handlePlayerPause);  
+  client.on('playerpause', handlePlayerPause);
+  client.on('playerrespawn', handlePlayerRespawn);
   client.on('disconnect', handleDisconnect);
 
   function handleGameList() {
@@ -82,6 +83,17 @@ io.on('connection', (client: Socket) => {
     game.playerPause(playerId);
 
     client.emit('playerpause', playerId);
+  }
+
+  function handlePlayerRespawn({ gameId, playerId }) {
+    const game = games[gameId];
+    if (!game) {
+      return;
+    }
+
+    game.playerRespawn(playerId);
+
+    client.emit('playerrespawn');
   }
 
   function handleDisconnect() {

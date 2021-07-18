@@ -62,6 +62,15 @@ export class Snake implements ISnake {
     this.body.unshift({ x: this.x, y: this.y });
   }
 
+  respawn(): void {
+    this.x = 0;
+    this.y = 0;
+    this.dx = 1;
+    this.dy = 0;
+    this.direction = EDirection.R;
+    this.body = [{ x: 0, y: 0 }];
+  }
+
   getLength(): number {
     return this.body.length - 1;
   }

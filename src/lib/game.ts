@@ -33,6 +33,7 @@ export class Game {
 
       if (isWallObstacle || isSelfObstacle || isEnemyObstacle) {
         player.dead();
+        this.state.deadPlayers.push(player.id);
         return;
       }
 
@@ -113,6 +114,16 @@ export class Game {
     player.togglePause();
   }
 
+  playerRespawn(playerId: string): void {
+    const player = this.state.players[playerId];
+
+    if (!player) {
+      return;
+    }
+
+    player.respawn();
+  }
+
   deletePlayer(playerId: string): void {
     delete this.state.players[playerId];
   }
@@ -129,9 +140,14 @@ export class Game {
 
   setWinner(): void {
     const players = Object.values(this.state.players);
+    if (!players.length) {
+      this.state.winnerName = 'No Winner';
+      this.state.winnerScore = 0;
+    }
+
     if (players.length === 1) {
       this.state.winnerName = players[0].id;
-      this.state.winnerScore= players[0].score;
+      this.state.winnerScore = players[0].score;
       return;
     }
     const winner = players.sort((p1, p2) => p2.score - p1.score)[0];

@@ -25,6 +25,12 @@ export class Player implements IPlayer {
     this.isDead = true;
   }
 
+  respawn(): void {
+    this.isDead = false;
+    this.score = 0;
+    this.snake.respawn();
+  }
+
   setScore(score: number): void {
     this.score = score;
   }

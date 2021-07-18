@@ -11,6 +11,7 @@ export interface IGameState {
   isEnd: boolean;
   winnerName: string;
   winnerScore: number;
+  deadPlayers: string[];
 }
 
 export class GameState implements IGameState {
@@ -21,7 +22,7 @@ export class GameState implements IGameState {
   public isEnd: boolean;
   public winnerName: string;
   public winnerScore: number;
-  
+  public deadPlayers: string[];
 
   constructor(id: string, gridSize: number) {
     this.id = id;
@@ -31,6 +32,7 @@ export class GameState implements IGameState {
     this.isEnd = false;
     this.winnerName = '';
     this.winnerScore = 0;
+    this.deadPlayers = [];
   }
 
   public get(): IGameState {
@@ -42,6 +44,7 @@ export class GameState implements IGameState {
       food: this.food,
       winnerName: this.winnerName,
       winnerScore: this.winnerScore,
+      deadPlayers: this.deadPlayers,
     };
   }
 }
