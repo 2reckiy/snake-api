@@ -32,6 +32,10 @@ export class Snake implements ISnake {
     this.color = 'green';
   }
 
+  updateId(newId: string): void {
+    this.id = newId;
+  }
+
   setDirection(dx: number, dy: number): void {
     this.dx = dx;
     this.dy = dy;

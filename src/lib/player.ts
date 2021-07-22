@@ -4,14 +4,18 @@ export interface IPlayer {
   id: string;
   snake: ISnake;
   score: number;
+  pause: boolean;
+  isDead: boolean;
+  isDisconnected: boolean;
 }
 
 export class Player implements IPlayer {
   public id: string;
   public snake: Snake;
   public score: number;
-  public isDead: boolean;
   public pause: boolean;
+  public isDead: boolean;
+  public isDisconnected: boolean;
 
   constructor(id: string) {
     this.id = id;
@@ -19,6 +23,7 @@ export class Player implements IPlayer {
     this.score = 0;
     this.pause = false;
     this.isDead = false;
+    this.isDisconnected = false;
   }
 
   dead(): void {
@@ -29,6 +34,17 @@ export class Player implements IPlayer {
     this.isDead = false;
     this.score = 0;
     this.snake.respawn();
+  }
+
+  disconnect(): void {
+    this.isDisconnected = true;
+    this.pause = true;
+  }
+
+  reconnect(newId: string): void {
+    this.id = newId;
+    this.isDisconnected = false;
+    this.snake.updateId(newId);
   }
 
   setScore(score: number): void {

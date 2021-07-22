@@ -4,14 +4,20 @@ import { Player } from "./player";
 export type GameMap = { [gameId: string]: Game };
 
 export class Game {
+  public id = null;
   public state: GameState;
 
-  public tickRate = 10;
+  public tickRate = 15;
   public gridSize = 20;
 
   constructor(id: string) {
+    this.id = id;
     this.state = new GameState(id, this.gridSize);
     this.spawnFood();
+  }
+
+  start(): void {
+    this.state.isStarted = true;
   }
 
   tick(): IGameState {
@@ -22,14 +28,13 @@ export class Game {
       }
 
       const snake = player.snake;
-      const head = snake.body[0];
 
       snake.move();
 
-      const isWallObstacle = head.x < 0 || head.x > this.gridSize || head.y < 0 || head.y > this.gridSize;
-      const isSelfObstacle = snake.body.some((part, i) => i > 0 && head.x === part.x && head.y === part.y);
+      const isWallObstacle = snake.x < 0 || snake.x >= this.gridSize || snake.y < 0 || snake.y >= this.gridSize;
+      const isSelfObstacle = snake.body.some((part, i) => i > 0 && snake.x === part.x && snake.y === part.y);
       const isEnemyObstacle = this.getPlayerEnemies(player.id)
-        .some(enemy => enemy.snake.body.some(part => head.x === part.x && head.y === part.y));
+        .some(enemy => enemy.snake.body.some(part => snake.x === part.x && snake.y === part.y));
 
       if (isWallObstacle || isSelfObstacle || isEnemyObstacle) {
         player.dead();
@@ -37,7 +42,7 @@ export class Game {
         return;
       }
 
-      if (head.x === food.x && head.y === food.y) {
+      if (snake.x === food.x && snake.y === food.y) {
         snake.grow();
         player.setScore(snake.getLength());
         this.spawnFood();
@@ -124,18 +129,24 @@ export class Game {
     player.respawn();
   }
 
+  disconnectPlayer(playerId: string): void {
+    this.state.players[playerId].disconnect();
+  }
+
+  reconnectPlayer(prevPlayerId: string, playerId: string): void {
+    const player = this.state.players[prevPlayerId];
+    delete this.state.players[prevPlayerId];
+    player.reconnect(playerId);
+    this.state.players[playerId] = player;
+  }
+
   deletePlayer(playerId: string): void {
     delete this.state.players[playerId];
   }
 
-
   checkGameEnd(): void {
     this.state.isEnd = Object.values(this.state.players).every(player => player.isDead);
     this.setWinner();
-  }
-
-  getPlayerEnemies(playerId: string): Player[] {
-    return Object.values(this.state.players).filter(player => player.id !== playerId);
   }
 
   setWinner(): void {
@@ -155,5 +166,21 @@ export class Game {
     const winner = players.sort((p1, p2) => p2.score - p1.score)[0];
     this.state.winnerName = winner.id;
     this.state.winnerScore= winner.score;
+  }
+
+  isStarted(): boolean {
+    return this.state.isStarted;
+  }
+
+  doesPlayerExist(playerId: string): boolean {
+    return !!this.state.players[playerId];
+  }
+
+  getPlayerEnemies(playerId: string): Player[] {
+    return Object.values(this.state.players).filter(player => player.id !== playerId);
+  }
+
+  getPlayerIds(): string[] {
+    return Object.keys(this.state.players);
   }
 }

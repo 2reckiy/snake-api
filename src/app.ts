@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from  'cors';
+import cors from 'cors';
 import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import { Game, GameMap } from './lib/game';
@@ -36,25 +36,36 @@ io.on('connection', (client: Socket) => {
   function handleNewGame() {
     const id = Math.floor(Math.random() * 0xfffffffffffff).toString(16);
     games[id] = new Game(id);
-    
+
     io.emit('gamelist', Object.keys(games));
     client.emit('gameinit', id);
-
-    startGameInterval(games[id]);
   }
 
-  function handleJoinGame({ gameId, playerId }) {
+  function handleJoinGame({ gameId, playerId, prevPlayerId }) {
     const game = games[gameId];
     if (!game) {
+      client.emit('nogame');
       return;
     }
 
-    if (!clientGames[client.id]) {
-      clientGames[client.id] = {};
+    if (!clientGames[playerId]) {
+      clientGames[playerId] = {};
     }
-    clientGames[client.id][gameId] = playerId;
+    clientGames[playerId][gameId] = playerId;
 
-    game.join(playerId);
+    if (prevPlayerId && game.doesPlayerExist(prevPlayerId)) {
+      delete clientGames[prevPlayerId];
+      game.reconnectPlayer(prevPlayerId, playerId);
+    } else {
+      game.join(playerId);
+    }
+
+    // join socket room for the current game
+    client.join(gameId);
+
+    if (!game.isStarted()) {
+      startGameInterval(game);
+    }
 
     client.emit('gamejoin');
   }
@@ -71,7 +82,7 @@ io.on('connection', (client: Socket) => {
     } catch (e) {
       console.error(e);
       return;
-    }    
+    }
   }
 
   function handlePlayerPause({ gameId, playerId }) {
@@ -98,31 +109,39 @@ io.on('connection', (client: Socket) => {
 
   function handleDisconnect() {
     if (clientGames[client.id]) {
-      Object.keys(clientGames[client.id]).forEach(gameId => {
+      const gameIds = Object.keys(clientGames[client.id]);
+      gameIds.forEach(gameId => {
+        // leave socket room for the current game
+        client.leave(gameId);
+
         const playerId = clientGames[client.id][gameId];
         const game = games[gameId];
         if (!game) {
+          delete clientGames[client.id][gameId];
           return;
         }
-        game.deletePlayer(playerId);
+        game.disconnectPlayer(playerId);
       });
-
-      delete clientGames[client.id];
     }
-    console.log('user disconnected');
+    console.log(`user disconnected ${client.id}`);
   }
-  
+
   function startGameInterval(game: Game): void {
+    game.start();
     const intervalId = setInterval(() => {
       const state = game.tick();
 
       if (!state.isEnd) {
-        io.emit('gametick', state);
+        io.to(game.id).emit('gametick', state);
       } else {
         clearInterval(intervalId);
-        delete games[state.id];
-        //TODO: clear clients games
-        io.emit('gameend', state);
+
+        games[game.id].getPlayerIds()
+          .forEach(playerId => delete clientGames[playerId][game.id]);
+        delete games[game.id];
+
+        io.to(game.id).emit('gameend', state);
+        io.emit('gamelist', Object.keys(games));
       }
     }, 1000 / game.tickRate);
   }

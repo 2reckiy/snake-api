@@ -9,6 +9,7 @@ export interface IGameState {
   players: PlayerMap;
   food: ICoordinates,
   isEnd: boolean;
+  isStarted: boolean;
   winnerName: string;
   winnerScore: number;
   deadPlayers: string[];
@@ -20,6 +21,7 @@ export class GameState implements IGameState {
   public players: PlayerMap;
   public food: ICoordinates;
   public isEnd: boolean;
+  public isStarted: boolean;
   public winnerName: string;
   public winnerScore: number;
   public deadPlayers: string[];
@@ -30,6 +32,7 @@ export class GameState implements IGameState {
     this.players = {};
     this.food = { x: 0, y: 0 };
     this.isEnd = false;
+    this.isStarted = false;
     this.winnerName = '';
     this.winnerScore = 0;
     this.deadPlayers = [];
@@ -40,6 +43,7 @@ export class GameState implements IGameState {
       id: this.id,
       gridSize: this.gridSize,
       isEnd: this.isEnd,
+      isStarted: this.isStarted,
       players: this.players,
       food: this.food,
       winnerName: this.winnerName,
