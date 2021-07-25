@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from "http";
 import { Server, Socket } from "socket.io";
-import { Game, GameMap } from './lib/game';
+import { Game, GameMap, GameSettings } from './lib/game';
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -27,21 +27,21 @@ io.on('connection', (client: Socket) => {
   client.on('gameturn', handleGameTurn);
   client.on('playerpause', handlePlayerPause);
   client.on('playerrespawn', handlePlayerRespawn);
-  client.on('disconnect', handleDisconnect);
+  client.on('disconnecting', handleDisconnect);
 
   function handleGameList() {
     client.emit('gamelist', Object.keys(games));
   }
 
-  function handleNewGame() {
+  function handleNewGame(settings: GameSettings) {
     const id = Math.floor(Math.random() * 0xfffffffffffff).toString(16);
-    games[id] = new Game(id);
+    games[id] = new Game(id, settings);
 
     io.emit('gamelist', Object.keys(games));
     client.emit('gameinit', id);
   }
 
-  function handleJoinGame({ gameId, playerId, prevPlayerId }) {
+  function handleJoinGame({ gameId, playerId, playerName, prevPlayerId }) {
     const game = games[gameId];
     if (!game) {
       client.emit('nogame');
@@ -57,7 +57,7 @@ io.on('connection', (client: Socket) => {
       delete clientGames[prevPlayerId];
       game.reconnectPlayer(prevPlayerId, playerId);
     } else {
-      game.join(playerId);
+      game.join(playerId, playerName);
     }
 
     // join socket room for the current game
@@ -67,7 +67,7 @@ io.on('connection', (client: Socket) => {
       startGameInterval(game);
     }
 
-    client.emit('gamejoin');
+    client.emit('gamejoin', !game.state.players[playerId].pause);
   }
 
   function handleGameTurn({ gameId, playerId, directionCode }) {
@@ -93,7 +93,7 @@ io.on('connection', (client: Socket) => {
 
     game.playerPause(playerId);
 
-    client.emit('playerpause', playerId);
+    client.emit('playerpause');
   }
 
   function handlePlayerRespawn({ gameId, playerId }) {

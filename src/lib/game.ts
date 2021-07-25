@@ -1,18 +1,34 @@
+import { GAME_DIFFICULTY, ICoordinates, OBSTACLE } from "../interface/common";
 import { GameState, IGameState } from "./game-state";
+import { Obstacle } from "./obstacle";
 import { Player } from "./player";
+import { Snake } from "./snake";
 
 export type GameMap = { [gameId: string]: Game };
-
+export interface GameSettings {
+  difficulty: GAME_DIFFICULTY;
+}
 export class Game {
+  private colors = [
+    '#008000',
+    '#425ff8',
+    '#f8ec42',
+    '#42eef8',
+    '#bc42f8',
+  ];
   public id = null;
   public state: GameState;
 
-  public tickRate = 15;
+  public tickRate = 10;
   public gridSize = 20;
 
-  constructor(id: string) {
+  constructor(id: string, settings: GameSettings) {
     this.id = id;
-    this.state = new GameState(id, this.gridSize);
+    this.state = new GameState(id, this.gridSize, settings.difficulty);
+
+    if (this.state.difficulty >= OBSTACLE.ROCK) {
+      this.generateObstacles();
+    }
     this.spawnFood();
   }
 
@@ -24,28 +40,26 @@ export class Game {
     const food = this.state.food;
     Object.values(this.state.players).forEach(player => {
       if (player.pause || player.isDead) {
+        player.snake.toggleColor();
         return;
       }
 
       const snake = player.snake;
+      snake.move(this.gridSize, this.state.difficulty);
 
-      snake.move();
+      const isHitObstacle = this.checkObstaclesHitting(player.id, snake);
 
-      const isWallObstacle = snake.x < 0 || snake.x >= this.gridSize || snake.y < 0 || snake.y >= this.gridSize;
-      const isSelfObstacle = snake.body.some((part, i) => i > 0 && snake.x === part.x && snake.y === part.y);
-      const isEnemyObstacle = this.getPlayerEnemies(player.id)
-        .some(enemy => enemy.snake.body.some(part => snake.x === part.x && snake.y === part.y));
-
-      if (isWallObstacle || isSelfObstacle || isEnemyObstacle) {
+      if (isHitObstacle) {
         player.dead();
-        this.state.deadPlayers.push(player.id);
+        this.state.addDiedPlayer(player.id);
         return;
       }
 
       if (snake.x === food.x && snake.y === food.y) {
+        this.spawnFood();
         snake.grow();
         player.setScore(snake.getLength());
-        this.spawnFood();
+        this.state.addGrownPlayer(player.id);
         return;
       }
 
@@ -55,30 +69,57 @@ export class Game {
 
     this.checkGameEnd();
 
-    return this.state.get();
+    const state = this.state.get();
+    this.state.clearOneTickData();
+    return state;
   }
 
-  join(playerId: string): GameState {
-    this.state.players[playerId] = new Player(playerId);
-
+  join(playerId: string, playerName: string): GameState {
+    const color = this.getPlayerColor();
+    this.state.players[playerId] = new Player(playerId, playerName, color);
+    console.log('Player Join', this.state)
     return this.state;
   }
 
   spawnFood(): void {
-    const food = {
-      x: Math.floor(Math.random() * this.gridSize),
-      y: Math.floor(Math.random() * this.gridSize),
+    let coordinates: ICoordinates;
+    let isCoordinatesCorrect = false;
+    const isRockComplexity = this.state.difficulty >= OBSTACLE.ROCK;
+    while (!isCoordinatesCorrect) {
+      coordinates = {
+        x: Math.floor(Math.random() * this.gridSize),
+        y: Math.floor(Math.random() * this.gridSize),
+      }
+
+      isCoordinatesCorrect = (!isRockComplexity || !Object.values(this.state.rocks)
+        .some(obstacle => obstacle.x === coordinates.x && obstacle.y === coordinates.y))
+        && !Object.values(this.state.players)
+          .some(player => player.snake.body
+            .some(path => path.x === coordinates.x && path.y === coordinates.y));
     }
 
-    Object.values(this.state.players).forEach(player => {
-      player.snake.body.forEach(path => {
-        if (path.x === food.x && path.y === food.y) {
-          return this.spawnFood();
-        }
-      });
-    });
+    this.state.food.setCoordinates(coordinates);
+  }
 
-    this.state.food = food;
+  generateObstacles(): void {
+    const obstacleCount = 5;
+    for (let i = 0; i < obstacleCount; i += 1) {
+      let coordinates: ICoordinates;
+      let isCoordinatesCorrect = false;
+      while (!isCoordinatesCorrect) {
+        coordinates = {
+          x: Math.floor(Math.random() * this.gridSize),
+          y: Math.floor(Math.random() * this.gridSize),
+        }
+
+        isCoordinatesCorrect = !Object.values(this.state.rocks)
+          .some(obstacle => obstacle.x === coordinates.x && obstacle.y === coordinates.y);
+
+        if (isCoordinatesCorrect) {
+          this.state.rocks.push(new Obstacle(coordinates));
+        }
+      }
+    }
   }
 
   playerMove(playerId: string, move: number): void {
@@ -115,8 +156,9 @@ export class Game {
     if (!player) {
       return;
     }
-
     player.togglePause();
+
+    console.log('playerPause', this.state);
   }
 
   playerRespawn(playerId: string): void {
@@ -144,9 +186,21 @@ export class Game {
     delete this.state.players[playerId];
   }
 
+  checkObstaclesHitting(playerId: string, snake: Snake): boolean {
+    const isWallComplexity = this.state.difficulty >= OBSTACLE.WALL;
+    const isRockComplexity = this.state.difficulty >= OBSTACLE.ROCK;
+
+    const isWallObstacle = isWallComplexity && (snake.x < 0 || snake.x >= this.gridSize || snake.y < 0 || snake.y >= this.gridSize);
+    const isRockObstacle = isRockComplexity && this.state.rocks.some(rock => snake.x === rock.x && snake.y === rock.y);
+    const isSelfObstacle = snake.body.some((part, i) => i > 0 && snake.x === part.x && snake.y === part.y);
+    const isEnemyObstacle = this.getPlayerEnemies(playerId)
+      .some(enemy => enemy.snake.body.some(part => snake.x === part.x && snake.y === part.y));
+    return isWallObstacle || isRockObstacle || isSelfObstacle || isEnemyObstacle;
+  }
+
   checkGameEnd(): void {
     this.state.isEnd = Object.values(this.state.players).every(player => player.isDead);
-    this.setWinner();
+    this.state.isEnd && this.setWinner();
   }
 
   setWinner(): void {
@@ -158,14 +212,14 @@ export class Game {
     }
 
     if (players.length === 1) {
-      this.state.winnerName = players[0].id;
+      this.state.winnerName = players[0].name;
       this.state.winnerScore = players[0].score;
       return;
     }
-    
+
     const winner = players.sort((p1, p2) => p2.score - p1.score)[0];
-    this.state.winnerName = winner.id;
-    this.state.winnerScore= winner.score;
+    this.state.winnerName = winner.name;
+    this.state.winnerScore = winner.score;
   }
 
   isStarted(): boolean {
@@ -182,5 +236,10 @@ export class Game {
 
   getPlayerIds(): string[] {
     return Object.keys(this.state.players);
+  }
+
+  getPlayerColor(): string {
+    const index = Math.floor(Math.random() * this.colors.length);
+    return this.colors.splice(index, 1)[0];
   }
 }
